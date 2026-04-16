@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"path": "../../../Desktop/Sistema Local (estágio)"
+		}
+	],
+	"settings": {
+		"liveServer.settings.multiRootWorkspaceName": "caps-coelhoneto-api"
+	}
+}

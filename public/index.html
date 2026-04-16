@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema CAPS - Centro de Atenção Psicossocial</title>
+    
+    <meta name="author" content="Gabriel Buhatem, Murilo Gabriel, Adão Endeo">
+
+    <!-- <script src="https://cdn.tailwindcss.com"></script> -->
+    <script src="./js/tailwind.js"></script>
+    <script src="./js/lucide.js"></script>
+    <!-- Adicionando CDN do jsPDF para geração de PDF -->
+    <script src="./js/jspdf.umd.min.js"></script>
+    <script src="./js/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #2563eb;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(-100%); }
+            to { transform: translateX(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="bg-blue-600 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div>
+                <h1 class="text-xl font-bold">Sistema CAPS-1</h1>
+                <p class="text-blue-100 text-sm">Centro de Atenção Psicossocial - Coelho Neto/MA</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <span class="text-blue-100" id="userGreeting">Olá, Usuário</span>
+                <button onclick="logout()" class="bg-transparent border border-white text-white px-4 py-2 rounded hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                    Sair
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="container mx-auto px-4">
+            <div class="flex space-x-1" id="navigation">
+                <button onclick="showPage('dashboard')" class="nav-btn flex items-center gap-2 px-4 py-3 text-gray-600 hover:text-blue-600 border-b-2 border-transparent hover:border-blue-600 transition-colors" data-page="dashboard">
+                    <i data-lucide="home" class="w-4 h-4"></i>
+                    Dashboard
+                </button>
+                <button onclick="showPage('pacientes')" class="nav-btn flex items-center gap-2 px-4 py-3 text-gray-600 hover:text-blue-600 border-b-2 border-transparent hover:border-blue-600 transition-colors" data-page="pacientes">
+                    <i data-lucide="users" class="w-4 h-4"></i>
+                    Pacientes
+                </button>
+                <button onclick="showPage('cadastrar-paciente')" class="nav-btn flex items-center gap-2 px-4 py-3 text-gray-600 hover:text-blue-600 border-b-2 border-transparent hover:border-blue-600 transition-colors" data-page="cadastrar-paciente">
+                    <i data-lucide="user-plus" class="w-4 h-4"></i>
+                    Cadastrar Paciente
+                </button>
+                <!-- Adicionando nova aba de Relatório Geral na navegação -->
+                <button onclick="showPage('relatorio-geral')" class="nav-btn flex items-center gap-2 px-4 py-3 text-gray-600 hover:text-blue-600 border-b-2 border-transparent hover:border-blue-600 transition-colors" data-page="relatorio-geral">
+                    <i data-lucide="file-text" class="w-4 h-4"></i>
+                    Relatório Geral
+                </button>
+                <button onclick="showPage('almoxarifado')" class="nav-btn flex items-center gap-2 px-4 py-3 text-gray-600 hover:text-blue-600 border-b-2 border-transparent hover:border-blue-600 transition-colors" data-page="almoxarifado">
+                    <i data-lucide="package" class="w-4 h-4"></i>
+                    Almoxarifado
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Dashboard Page -->
+        <div id="dashboard-page" class="page-content">
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-gray-900 mb-2">Dashboard</h2>
+                <p class="text-gray-600">Visão geral do sistema CAPS-1</p>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-medium text-gray-600">Total de Pacientes</h3>
+                        <i data-lucide="users" class="w-4 h-4 text-blue-600"></i>
+                    </div>
+                    <div class="text-2xl font-bold text-gray-900" id="totalPacientes">156</div>
+                    <p class="text-xs text-gray-500 mt-1">Pacientes cadastrados no sistema</p>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-medium text-gray-600">Pacientes Ativos</h3>
+                        <i data-lucide="activity" class="w-4 h-4 text-green-600"></i>
+                    </div>
+                    <div class="text-2xl font-bold text-gray-900" id="pacientesAtivos">142</div>
+                    <p class="text-xs text-gray-500 mt-1">Pacientes em acompanhamento</p>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-medium text-gray-600">Medicamentos Cadastrados</h3>
+                        <i data-lucide="package" class="w-4 h-4 text-purple-600"></i>
+                    </div>
+                    <div class="text-2xl font-bold text-gray-900" id="totalMedicamentos">45</div>
+                    <p class="text-xs text-gray-500 mt-1">Tipos de medicamentos disponíveis</p>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-medium text-gray-600">Medicamentos em Estoque</h3>
+                        <i data-lucide="package" class="w-4 h-4 text-orange-600"></i>
+                    </div>
+                    <div class="text-2xl font-bold text-gray-900" id="medicamentosEstoque">38</div>
+                    <p class="text-xs text-gray-500 mt-1">Medicamentos com estoque disponível</p>
+                </div>
+            </div>
+
+            <!-- Quick Actions and System Info -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Ações Rápidas</h3>
+                    <p class="text-gray-600 mb-4">Acesse rapidamente as principais funcionalidades</p>
+                    
+                    <div class="space-y-4">
+                        <button onclick="showPage('cadastrar-paciente')" class="w-full p-4 text-left border rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-colors">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="user-plus" class="w-5 h-5 text-blue-600"></i>
+                                <div>
+                                    <h4 class="font-medium text-gray-900">Cadastrar Paciente</h4>
+                                    <p class="text-sm text-gray-500">Adicionar novo paciente ao sistema</p>
+                                </div>
+                            </div>
+                        </button>
+
+                        <button onclick="showPage('pacientes')" class="w-full p-4 text-left border rounded-lg hover:bg-green-50 hover:border-green-200 transition-colors">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="users" class="w-5 h-5 text-green-600"></i>
+                                <div>
+                                    <h4 class="font-medium text-gray-900">Ver Pacientes</h4>
+                                    <p class="text-sm text-gray-500">Consultar lista de pacientes cadastrados</p>
+                                </div>
+                            </div>
+                        </button>
+
+                        <button onclick="showPage('almoxarifado')" class="w-full p-4 text-left border rounded-lg hover:bg-purple-50 hover:border-purple-200 transition-colors">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="package" class="w-5 h-5 text-purple-600"></i>
+                                <div>
+                                    <h4 class="font-medium text-gray-900">Gerenciar Almoxarifado</h4>
+                                    <p class="text-sm text-gray-500">Controlar estoque de medicamentos</p>
+                                </div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Informações do Sistema</h3>
+                    <p class="text-gray-600 mb-4">Detalhes sobre o sistema CAPS-1</p>
+                    
+                    <div class="p-4 bg-blue-50 rounded-lg mb-4">
+                        <h4 class="font-medium text-blue-900 mb-2">Centro de Atenção Psicossocial</h4>
+                        <p class="text-sm text-blue-700">Sistema de gestão para o CAPS 1 da Secretaria de Saúde de Coelho Neto - MA</p>
+                    </div>
+
+                    <div class="space-y-2 text-sm text-gray-600">
+                        <div class="flex justify-between">
+                            <span>Versão do Sistema:</span>
+                            <span class="font-medium">2.0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Última Atualização:</span>
+                            <span class="font-medium">30/09/2025</span> 
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Status:</span>
+                            <span class="font-medium text-green-600">Ativo</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pacientes Page -->
+        <div id="pacientes-page" class="page-content hidden">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-3xl font-bold text-gray-900 mb-2">Pacientes</h2>
+                    <p class="text-gray-600" id="pacientesCount">0 pacientes encontrados</p>
+                </div>
+                <button onclick="showPage('cadastrar-paciente')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                    Cadastrar Paciente
+                </button>
+            </div>
+
+            <!-- Search -->
+            <div class="bg-white p-6 rounded-lg shadow mb-6">
+                <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <i data-lucide="search" class="w-5 h-5"></i>
+                    Pesquisar Pacientes
+                </h3>
+                <div class="relative">
+                    <i data-lucide="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4"></i>
+                    <input type="text" id="searchPacientes" placeholder="Digite o nome, CPF ou cartão SUS do paciente..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+            </div>
+
+            <!-- Pacientes Table -->
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paciente</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CPF</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cartão SUS</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pacientesTableBody" class="bg-white divide-y divide-gray-200">
+                            <!-- Pacientes will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cadastrar Paciente Page -->
+        <div id="cadastrar-paciente-page" class="page-content hidden">
+            <div class="mb-6">
+                <h2 class="text-3xl font-bold text-gray-900 mb-2">Cadastrar Paciente</h2>
+                <p class="text-gray-600">Preencha os dados do paciente para cadastro no sistema</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow">
+                <form id="pacienteForm" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="nome" class="block text-sm font-medium text-gray-700 mb-2">Nome Completo *</label>
+                            <input type="text" id="nome" name="nome" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div>
+                            <label for="cpf" class="block text-sm font-medium text-gray-700 mb-2">CPF *</label>
+                            <input type="text" id="cpf" name="cpf" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="000.000.000-00">
+                        </div>
+
+                        <div>
+                            <label for="cartao_sus" class="block text-sm font-medium text-gray-700 mb-2">Cartão SUS *</label>
+                            <input type="text" id="cartao_sus" name="cartao_sus" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div>
+                            <label for="data_nascimento" class="block text-sm font-medium text-gray-700 mb-2">Data de Nascimento *</label>
+                            <input type="date" id="data_nascimento" name="data_nascimento" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div>
+                            <label for="telefone" class="block text-sm font-medium text-gray-700 mb-2">Telefone</label>
+                            <input type="tel" id="telefone" name="telefone" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="(00) 00000-0000">
+                        </div>
+
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-2">E-mail</label>
+                            <input type="email" id="email" name="email" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="endereco" class="block text-sm font-medium text-gray-700 mb-2">Endereço Completo</label>
+                        <textarea id="endereco" name="endereco" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Rua, número, bairro, cidade, CEP"></textarea>
+                    </div>
+
+                    <div>
+                        <label for="observacoes" class="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+                        <textarea id="observacoes" name="observacoes" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Observações adicionais sobre o paciente"></textarea>
+                    </div>
+
+                    <div>
+                        <label for="prontuario_livre" class="block text-sm font-medium text-gray-700 mb-2">Prontuário Livre</label>
+                        <textarea id="prontuario_livre" name="prontuario_livre" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Digite informações adicionais ou observações sobre o paciente"></textarea>
+                    </div>
+
+                    <div class="flex gap-4">
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg">
+                            Cadastrar Paciente
+                        </button>
+                        <button type="button" onclick="resetForm('pacienteForm')" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-2 rounded-lg">
+                            Limpar Formulário
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Almoxarifado Page -->
+        <div id="almoxarifado-page" class="page-content hidden">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-3xl font-bold text-gray-900 mb-2">Almoxarifado - Medicamentos</h2>
+                    <p class="text-gray-600" id="medicamentosCount">0 medicamentos encontrados</p>
+                </div>
+                <div class="flex gap-4">
+                    <button onclick="openMedicamentoModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        Cadastrar Medicamento
+                    </button>
+                    <!-- Novo botão para exportar medicamentos -->
+                    <button onclick="exportarMedicamentosPDF()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                        Exportar PDF
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search and Filters -->
+            <div class="bg-white p-6 rounded-lg shadow mb-6">
+                <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <i data-lucide="search" class="w-5 h-5"></i>
+                    Pesquisar e Filtrar Medicamentos
+                </h3>
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                    <div class="lg:col-span-2">
+                        <div class="relative">
+                            <i data-lucide="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4"></i>
+                            <input type="text" id="searchMedicamentos" placeholder="Digite o nome do medicamento, princípio ativo ou fabricante..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                    <!-- Adicionando filtros de estoque -->
+                    <div>
+                        <label for="filtroEstoque" class="block text-sm font-medium text-gray-700 mb-1">Filtrar por Estoque</label>
+                        <select id="filtroEstoque" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="todos">Todos os medicamentos</option>
+                            <option value="sem-estoque">Sem estoque</option>
+                            <option value="estoque-baixo">Estoque baixo</option>
+                            <option value="estoque-ok">Estoque OK</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="limparFiltros()" class="w-full px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg flex items-center justify-center gap-2">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                            Limpar Filtros
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stock Alerts -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-red-100 rounded-lg">
+                            <i data-lucide="alert-triangle" class="w-5 h-5 text-red-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Sem Estoque</p>
+                            <p class="text-2xl font-bold text-red-600" id="semEstoque">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-yellow-100 rounded-lg">
+                            <i data-lucide="package" class="w-5 h-5 text-yellow-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Estoque Baixo</p>
+                            <p class="text-2xl font-bold text-yellow-600" id="estoqueBaixo">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-green-100 rounded-lg">
+                            <i data-lucide="check-circle" class="w-5 h-5 text-green-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Estoque OK</p>
+                            <p class="text-2xl font-bold text-green-600" id="estoqueOk">0</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Medicamentos Table -->
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medicamento</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fabricante</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lote</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Validade</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estoque</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="medicamentosTableBody" class="bg-white divide-y divide-gray-200">
+                            <!-- Medicamentos will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Prontuário Page -->
+        <div id="prontuario-page" class="page-content hidden">
+            <div class="flex items-center gap-4 mb-6">
+                <button onclick="showPage('pacientes')" class="text-blue-600 hover:text-blue-800 flex items-center gap-2">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                    Voltar para Pacientes
+                </button>
+                <div class="h-6 w-px bg-gray-300"></div>
+                <div>
+                    <h2 class="text-3xl font-bold text-gray-900 mb-1" id="prontuario-paciente-nome">Prontuário do Paciente</h2>
+                    <p class="text-gray-600" id="prontuario-paciente-info">Informações médicas e histórico</p>
+                </div>
+            </div>
+
+            <!-- Patient Info Card -->
+            <div class="bg-white rounded-lg shadow mb-6">
+                <div class="p-6 border-b">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Informações do Paciente</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="prontuario-info-basica">
+                        <!-- Patient basic info will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs Navigation -->
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+                <div class="border-b border-gray-200">
+                    <nav class="flex space-x-8 px-6" aria-label="Tabs">
+                        <!-- REMOVIDO: <button onclick="showProntuarioTab('consultas')" class="prontuario-tab-btn py-4 px-1 border-b-2 font-medium text-sm border-blue-500 text-blue-600" data-tab="consultas">
+                            <i data-lucide="calendar" class="w-4 h-4 inline mr-2"></i>
+                            Consultas
+                        </button> -->
+                        <button onclick="showProntuarioTab('medicamentos')" class="prontuario-tab-btn py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300" data-tab="medicamentos">
+                            <i data-lucide="pill" class="w-4 h-4 inline mr-2"></i>
+                            Medicamentos
+                        </button>
+                        <!-- REMOVIDO: <button onclick="showProntuarioTab('exames')" class="prontuario-tab-btn py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300" data-tab="exames">
+                            <i data-lucide="file-text" class="w-4 h-4 inline mr-2"></i>
+                            Exames
+                        </button> -->
+                        <button onclick="showProntuarioTab('historico')" class="prontuario-tab-btn py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300" data-tab="historico">
+                            <i data-lucide="clock" class="w-4 h-4 inline mr-2"></i>
+                            Histórico
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- Tab Content -->
+                <div class="p-6">
+                    <!-- Consultas Tab -->
+                    <!-- REMOVIDO: <div id="consultas-tab" class="prontuario-tab-content">
+                        <div class="flex justify-between items-center mb-4">
+                            <h4 class="text-lg font-medium text-gray-900">Consultas Realizadas</h4>
+                            <button onclick="openConsultaModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                                Nova Consulta
+                            </button>
+                        </div>
+                        <div id="consultas-list" class="space-y-4">
+                             Consultas will be populated by JavaScript 
+                        </div>
+                    </div> -->
+
+                    <!-- Medicamentos Tab -->
+                    <div id="medicamentos-tab" class="prontuario-tab-content">
+                        <div class="flex justify-between items-center mb-4">
+                            <h4 class="text-lg font-medium text-gray-900">Medicamentos Prescritos</h4>
+                            <button onclick="openPrescricaoModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                                Nova Prescrição
+                            </button>
+                        </div>
+                        <div id="medicamentos-prescritos-list" class="space-y-4">
+                            <!-- Medicamentos prescritos will be populated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Exames Tab -->
+                    <!-- REMOVIDO: <div id="exames-tab" class="prontuario-tab-content hidden">
+                        <div class="flex justify-between items-center mb-4">
+                            <h4 class="text-lg font-medium text-gray-900">Exames Solicitados</h4>
+                            <button onclick="openExameModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                                Solicitar Exame
+                            </button>
+                        </div>
+                        <div id="exames-list" class="space-y-4">
+                             Exames will be populated by JavaScript 
+                        </div>
+                    </div> -->
+
+                    <!-- Histórico Tab -->
+                    <div id="historico-tab" class="prontuario-tab-content hidden">
+                        <h4 class="text-lg font-medium text-gray-900 mb-4">Histórico Médico</h4>
+                        <div id="historico-list" class="space-y-4">
+                            <!-- Histórico will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Adicionando nova página de Relatório Geral -->
+        <!-- Relatório Geral Page -->
+        <div id="relatorio-geral-page" class="page-content hidden">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-3xl font-bold text-gray-900 mb-2">Relatório Geral de Pacientes</h2>
+                    <p class="text-gray-600" id="relatorioCount">Relatório completo de todos os pacientes cadastrados</p>
+                </div>
+                <button onclick="downloadRelatorioPDF()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                    Download PDF
+                </button>
+            </div>
+
+            <!-- Filtros do Relatório -->
+            <div class="bg-white p-6 rounded-lg shadow mb-6">
+                <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <i data-lucide="filter" class="w-5 h-5"></i>
+                    Filtros do Relatório
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label for="filtroStatus" class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                        <select id="filtroStatus" onchange="filtrarRelatorio()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Todos os Status</option>
+                            <option value="Ativo">Ativo</option>
+                            <option value="Inativo">Inativo</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="filtroDataInicio" class="block text-sm font-medium text-gray-700 mb-2">Data Cadastro (Início)</label>
+                        <input type="date" id="filtroDataInicio" onchange="filtrarRelatorio()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="filtroDataFim" class="block text-sm font-medium text-gray-700 mb-2">Data Cadastro (Fim)</label>
+                        <input type="date" id="filtroDataFim" onchange="filtrarRelatorio()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <button onclick="limparFiltrosRelatorio()" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg">
+                        Limpar Filtros
+                    </button>
+                </div>
+            </div>
+
+            <!-- Relatório Detalhado -->
+            <div class="space-y-6" id="relatorioContainer">
+                <!-- Conteúdo será gerado dinamicamente -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Medicamento Modal -->
+    <div id="medicamentoModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b">
+                <h3 class="text-lg font-semibold text-gray-900" id="modalTitle">Cadastrar Novo Medicamento</h3>
+                <p class="text-gray-600">Preencha os dados do medicamento para o controle de estoque</p>
+            </div>
+            
+            <form id="medicamentoForm" class="p-6 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="med_nome" class="block text-sm font-medium text-gray-700 mb-2">Nome do Medicamento *</label>
+                        <input type="text" id="med_nome" name="nome" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Ex: Paracetamol">
+                    </div>
+
+                    <div>
+                        <label for="med_principio_ativo" class="block text-sm font-medium text-gray-700 mb-2">Princípio Ativo *</label>
+                        <input type="text" id="med_principio_ativo" name="principio_ativo" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Ex: Paracetamol">
+                    </div>
+
+                    <div>
+                        <label for="med_concentracao" class="block text-sm font-medium text-gray-700 mb-2">Concentração *</label>
+                        <input type="text" id="med_concentracao" name="concentracao" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Ex: 500mg">
+                    </div>
+
+                    <div>
+                        <label for="med_forma_farmaceutica" class="block text-sm font-medium text-gray-700 mb-2">Forma Farmacêutica *</label>
+                        <input type="text" id="med_forma_farmaceutica" name="forma_farmaceutica" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Ex: Comprimido">
+                    </div>
+
+                    <div>
+                        <label for="med_fabricante" class="block text-sm font-medium text-gray-700 mb-2">Fabricante *</label>
+                        <input type="text" id="med_fabricante" name="fabricante" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Ex: EMS">
+                    </div>
+
+                    <div>
+                        <label for="med_lote" class="block text-sm font-medium text-gray-700 mb-2">Lote *</label>
+                        <input type="text" id="med_lote" name="lote" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Ex: ABC123">
+                    </div>
+
+                    <div>
+                        <label for="med_data_validade" class="block text-sm font-medium text-gray-700 mb-2">Data de Validade *</label>
+                        <input type="date" id="med_data_validade" name="data_validade" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <div>
+                        <label for="med_quantidade_estoque" class="block text-sm font-medium text-gray-700 mb-2">Quantidade em Estoque *</label>
+                        <input type="number" id="med_quantidade_estoque" name="quantidade_estoque" min="0" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Ex: 100">
+                    </div>
+
+                    <div>
+                        <label for="med_quantidade_minima" class="block text-sm font-medium text-gray-700 mb-2">Quantidade Mínima *</label>
+                        <input type="number" id="med_quantidade_minima" name="quantidade_minima" min="0" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Ex: 10">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="med_observacoes" class="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+                    <textarea id="med_observacoes" name="observacoes" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Observações adicionais sobre o medicamento"></textarea>
+                </div>
+
+                <div class="flex justify-end gap-4 pt-4 border-t">
+                    <button type="button" onclick="closeMedicamentoModal()" class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+                        <span id="submitButtonText">Cadastrar</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Consulta Modal -->
+    <div id="consultaModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b">
+                <h3 class="text-lg font-semibold text-gray-900">Nova Consulta</h3>
+                <p class="text-gray-600">Registrar nova consulta médica</p>
+            </div>
+            
+            <form id="consultaForm" class="p-6 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="consulta_data" class="block text-sm font-medium text-gray-700 mb-2">Data da Consulta *</label>
+                        <input type="date" id="consulta_data" name="data" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <div>
+                        <label for="consulta_profissional" class="block text-sm font-medium text-gray-700 mb-2">Profissional *</label>
+                        <input type="text" id="consulta_profissional" name="profissional" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Nome do profissional">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="consulta_queixa" class="block text-sm font-medium text-gray-700 mb-2">Queixa Principal</label>
+                    <textarea id="consulta_queixa" name="queixa" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Descreva a queixa principal do paciente"></textarea>
+                </div>
+
+                <div>
+                    <label for="consulta_observacoes" class="block text-sm font-medium text-gray-700 mb-2">Observações da Consulta *</label>
+                    <textarea id="consulta_observacoes" name="observacoes" rows="4" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Observações, diagnóstico, conduta médica..."></textarea>
+                </div>
+
+                <div class="flex justify-end gap-4 pt-4 border-t">
+                    <button type="button" onclick="closeConsultaModal()" class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+                        Registrar Consulta
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Dispensação Modal -->
+    <div id="dispensacaoModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b">
+                <h3 class="text-lg font-semibold text-gray-900">Registrar Dispensação de Medicamento</h3>
+                <p class="text-gray-600">Registrar a entrega de medicamento ao paciente</p>
+            </div>
+            
+            <form id="dispensacaoForm" class="p-6 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="disp_medicamento" class="block text-sm font-medium text-gray-700 mb-2">Medicamento *</label>
+                        <select id="disp_medicamento" name="medicamento" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Selecione o medicamento</option>
+                             Options will be populated by JavaScript 
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="disp_quantidade" class="block text-sm font-medium text-gray-700 mb-2">Quantidade Dispensada *</label>
+                        <input type="number" id="disp_quantidade" name="quantidade" min="1" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Ex: 30">
+                    </div>
+
+                    <div>
+                        <label for="disp_data_dispensacao" class="block text-sm font-medium text-gray-700 mb-2">Data da Dispensação *</label>
+                        <input type="date" id="disp_data_dispensacao" name="data_dispensacao" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <div>
+                        <label for="disp_proxima_retirada" class="block text-sm font-medium text-gray-700 mb-2">Próxima Retirada *</label>
+                        <input type="date" id="disp_proxima_retirada" name="proxima_retirada" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label for="disp_funcionario" class="block text-sm font-medium text-gray-700 mb-2">Funcionário Responsável *</label>
+                        <input type="text" id="disp_funcionario" name="funcionario" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Nome do funcionário que despachou">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="disp_observacoes" class="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+                    <textarea id="disp_observacoes" name="observacoes" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Observações sobre a dispensação"></textarea>
+                </div>
+
+                <div class="flex justify-end gap-4 pt-4 border-t">
+                    <button type="button" onclick="closeDispensacaoModal()" class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+                        Registrar Dispensação
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Prescrição Modal -->
+    <div id="prescricaoModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b">
+                <h3 class="text-lg font-semibold text-gray-900">Nova Prescrição</h3>
+                <p class="text-gray-600">Prescrever medicamentos do almoxarifado para o paciente</p>
+            </div>
+            
+            <form id="prescricaoForm" class="p-6 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="presc_medicamento" class="block text-sm font-medium text-gray-700 mb-2">Medicamento Disponível *</label>
+                        <select id="presc_medicamento" name="medicamento" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Selecione o medicamento</option>
+                             Options will be populated by JavaScript 
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">Apenas medicamentos com estoque disponível</p>
+                    </div>
+
+                    <div>
+                        <label for="presc_quantidade" class="block text-sm font-medium text-gray-700 mb-2">Quantidade a Prescrever *</label>
+                        <input type="number" id="presc_quantidade" name="quantidade" min="1" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Ex: 30">
+                        <p class="text-xs text-gray-500 mt-1" id="estoque-disponivel">Estoque disponível: -</p>
+                    </div>
+
+                    <div>
+                        <label for="presc_dosagem" class="block text-sm font-medium text-gray-700 mb-2">Dosagem/Posologia *</label>
+                        <input type="text" id="presc_dosagem" name="dosagem" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Ex: 1 comprimido de 8 em 8 horas">
+                    </div>
+
+                    <div>
+                        <label for="presc_duracao" class="block text-sm font-medium text-gray-700 mb-2">Duração do Tratamento *</label>
+                        <input type="text" id="presc_duracao" name="duracao" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Ex: 30 dias">
+                    </div>
+
+                    <div>
+                        <label for="presc_data_dispensacao" class="block text-sm font-medium text-gray-700 mb-2">Data da Dispensação *</label>
+                        <input type="date" id="presc_data_dispensacao" name="data_dispensacao" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <div>
+                        <label for="presc_proxima_retirada" class="block text-sm font-medium text-gray-700 mb-2">Próxima Retirada *</label>
+                        <input type="date" id="presc_proxima_retirada" name="proxima_retirada" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label for="presc_funcionario" class="block text-sm font-medium text-gray-700 mb-2">Funcionário Responsável *</label>
+                        <input type="text" id="presc_funcionario" name="funcionario" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Nome do funcionário que está dispensando">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="presc_observacoes" class="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+                    <textarea id="presc_observacoes" name="observacoes" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Observações sobre a prescrição e dispensação"></textarea>
+                </div>
+
+                <div class="flex justify-end gap-4 pt-4 border-t">
+                    <button type="button" onclick="closePrescricaoModal()" class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+                        Prescrever e Dispensar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Editar Paciente Modal -->
+    <div id="editarPacienteModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b">
+                <h3 class="text-lg font-semibold text-gray-900">Editar Informações do Paciente</h3>
+                <p class="text-gray-600">Modifique os dados do paciente conforme necessário</p>
+            </div>
+            
+            <form id="editarPacienteForm" class="p-6 space-y-4">
+                <input type="hidden" id="edit_paciente_id" name="id">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="edit_nome" class="block text-sm font-medium text-gray-700 mb-2">Nome Completo *</label>
+                        <input type="text" id="edit_nome" name="nome" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <div>
+                        <label for="edit_cpf" class="block text-sm font-medium text-gray-700 mb-2">CPF *</label>
+                        <input type="text" id="edit_cpf" name="cpf" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="000.000.000-00">
+                    </div>
+
+                    <div>
+                        <label for="edit_cartao_sus" class="block text-sm font-medium text-gray-700 mb-2">Cartão SUS *</label>
+                        <input type="text" id="edit_cartao_sus" name="cartao_sus" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <div>
+                        <label for="edit_data_nascimento" class="block text-sm font-medium text-gray-700 mb-2">Data de Nascimento *</label>
+                        <input type="date" id="edit_data_nascimento" name="data_nascimento" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <div>
+                        <label for="edit_telefone" class="block text-sm font-medium text-gray-700 mb-2">Telefone</label>
+                        <input type="tel" id="edit_telefone" name="telefone" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="(00) 00000-0000">
+                    </div>
+
+                    <div>
+                        <label for="edit_email" class="block text-sm font-medium text-gray-700 mb-2">E-mail</label>
+                        <input type="email" id="edit_email" name="email" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label for="edit_status" class="block text-sm font-medium text-gray-700 mb-2">Status *</label>
+                        <select id="edit_status" name="status" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="Ativo">Ativo</option>
+                            <option value="Inativo">Inativo</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="edit_endereco" class="block text-sm font-medium text-gray-700 mb-2">Endereço Completo</label>
+                    <textarea id="edit_endereco" name="endereco" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Rua, número, bairro, cidade, CEP"></textarea>
+                </div>
+
+                <div>
+                    <label for="edit_observacoes" class="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+                    <textarea id="edit_observacoes" name="observacoes" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Observações adicionais sobre o paciente"></textarea>
+                </div>
+
+                <div class="flex justify-end gap-4 pt-4 border-t">
+                    <button type="button" onclick="closeEditarPacienteModal()" class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+                        Salvar Alterações
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Cadastro Medicamento na Prescrição Modal -->
+    <div id="cadastroMedicamentoPrescricaoModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b">
+                <h3 class="text-lg font-semibold text-gray-900">Cadastrar Novo Medicamento</h3>
+                <p class="text-gray-600">Cadastre um novo medicamento para prescrever ao paciente</p>
+            </div>
+            
+            <form id="cadastroMedicamentoPrescricaoForm" class="p-6 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="novo_med_nome" class="block text-sm font-medium text-gray-700 mb-2">Nome do Medicamento *</label>
+                        <input type="text" id="novo_med_nome" name="nome" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Ex: Paracetamol">
+                    </div>
+
+                    <div>
+                        <label for="novo_med_principio_ativo" class="block text-sm font-medium text-gray-700 mb-2">Princípio Ativo *</label>
+                        <input type="text" id="novo_med_principio_ativo" name="principio_ativo" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Ex: Paracetamol">
+                    </div>
+
+                    <div>
+                        <label for="novo_med_concentracao" class="block text-sm font-medium text-gray-700 mb-2">Concentração *</label>
+                        <input type="text" id="novo_med_concentracao" name="concentracao" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Ex: 500mg">
+                    </div>
+
+                    <div>
+                        <label for="novo_med_forma_farmaceutica" class="block text-sm font-medium text-gray-700 mb-2">Forma Farmacêutica *</label>
+                        <input type="text" id="novo_med_forma_farmaceutica" name="forma_farmaceutica" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Ex: Comprimido">
+                    </div>
+
+                    <div>
+                        <label for="novo_med_fabricante" class="block text-sm font-medium text-gray-700 mb-2">Fabricante *</label>
+                        <input type="text" id="novo_med_fabricante" name="fabricante" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Ex: EMS">
+                    </div>
+
+                    <div>
+                        <label for="novo_med_lote" class="block text-sm font-medium text-gray-700 mb-2">Lote *</label>
+                        <input type="text" id="novo_med_lote" name="lote" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Ex: ABC123">
+                    </div>
+
+                    <div>
+                        <label for="novo_med_data_validade" class="block text-sm font-medium text-gray-700 mb-2">Data de Validade *</label>
+                        <input type="date" id="novo_med_data_validade" name="data_validade" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <div>
+                        <label for="novo_med_quantidade_estoque" class="block text-sm font-medium text-gray-700 mb-2">Quantidade em Estoque *</label>
+                        <input type="number" id="novo_med_quantidade_estoque" name="quantidade_estoque" min="1" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Ex: 100">
+                    </div>
+
+                    <div>
+                        <label for="novo_med_quantidade_minima" class="block text-sm font-medium text-gray-700 mb-2">Quantidade Mínima *</label>
+                        <input type="number" id="novo_med_quantidade_minima" name="quantidade_minima" min="0" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Ex: 10">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="novo_med_observacoes" class="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+                    <textarea id="novo_med_observacoes" name="observacoes" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Observações adicionais sobre o medicamento"></textarea>
+                </div>
+
+                <div class="flex justify-end gap-4 pt-4 border-t">
+                    <button type="button" onclick="closeCadastroMedicamentoPrescricaoModal()" class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+                        Cadastrar e Selecionar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="./js/functions.js"></script>
+</body>
+</html>
